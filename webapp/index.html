@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hindi → English Live Translator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d0d0d;
+    --surface:  #181818;
+    --card:     #202020;
+    --border:   #2e2e2e;
+    --red:      #e63946;
+    --red-dim:  #7a1a22;
+    --green:    #2dc653;
+    --text:     #f0f0f0;
+    --muted:    #888;
+    --radius:   14px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 48px;
+  }
+
+  /* ── header ── */
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  header h1 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  header h1 span { color: var(--red); }
+  header p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 6px;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  /* ── record panel ── */
+  .record-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 40px;
+    text-align: center;
+    width: 100%;
+    max-width: 640px;
+    margin-bottom: 24px;
+  }
+
+  #recordBtn {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    border: none;
+    background: var(--red);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    transition: transform .15s, box-shadow .15s, background .2s;
+    box-shadow: 0 0 0 0 rgba(230,57,70,.4);
+  }
+  #recordBtn:hover { transform: scale(1.06); }
+  #recordBtn.recording {
+    background: #c0303b;
+    animation: pulse 1.4s ease infinite;
+  }
+  #recordBtn svg { pointer-events: none; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(230,57,70,.5); }
+    70%  { box-shadow: 0 0 0 18px rgba(230,57,70,0);  }
+    100% { box-shadow: 0 0 0 0   rgba(230,57,70,0);   }
+  }
+
+  #statusText {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 18px;
+    min-height: 1.4em;
+    transition: color .2s;
+  }
+  #statusText.active  { color: var(--red);   }
+  #statusText.working { color: #f4a261;      }
+  #statusText.done    { color: var(--green); }
+
+  /* ── waveform canvas ── */
+  #waveform {
+    width: 100%;
+    height: 56px;
+    border-radius: 8px;
+    background: var(--card);
+    display: block;
+  }
+
+  /* ── results ── */
+  .results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 640px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 500px) {
+    .results { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-height: 140px;
+    position: relative;
+  }
+  .card-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-label .flag { font-size: 1rem; }
+  .card-text {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text);
+    min-height: 60px;
+    word-break: break-word;
+  }
+  .card-text.placeholder { color: var(--muted); font-style: italic; font-size: .9rem; }
+
+  /* ── metrics bar ── */
+  .metrics {
+    display: flex;
+    gap: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    width: 100%;
+    max-width: 640px;
+    flex-wrap: wrap;
+  }
+  .metric { display: flex; flex-direction: column; gap: 2px; }
+  .metric-val { color: var(--text); font-weight: 600; font-size: 1rem; }
+
+  /* ── audio player ── */
+  #audioPlayer {
+    display: none;
+    width: 100%;
+    max-width: 640px;
+    margin-top: 16px;
+    border-radius: 8px;
+    accent-color: var(--red);
+  }
+
+  /* ── error toast ── */
+  #errorToast {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #7a1a22;
+    border: 1px solid var(--red);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: .85rem;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hindi <span>→</span> English</h1>
+  <p>Live Hindi → English speech translation</p>
+  <div class="badge">Whisper · MarianMT · Edge TTS</div>
+</header>
+
+<!-- Record panel -->
+<div class="record-panel">
+  <button id="recordBtn" title="Click to record">
+    <!-- mic icon -->
+    <svg id="micIcon" width="34" height="34" viewBox="0 0 24 24" fill="white">
+      <path d="M12 1a4 4 0 0 1 4 4v7a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm6 11a6 6 0 0 1-12 0H4a8 8 0 0 0 16 0h-2zm-6 8v3h-2v-3a8.06 8.06 0 0 1-2-.5l.8-1.86A6 6 0 0 0 12 21a6 6 0 0 0 2.2-.36l.8 1.86A8.06 8.06 0 0 1 12 23v-3z"/>
+    </svg>
+    <!-- stop icon (hidden) -->
+    <svg id="stopIcon" width="28" height="28" viewBox="0 0 24 24" fill="white" style="display:none">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+    </svg>
+  </button>
+
+  <div id="statusText">Click to start recording</div>
+  <canvas id="waveform"></canvas>
+</div>
+
+<!-- Transcript + Translation -->
+<div class="results">
+  <div class="card">
+    <div class="card-label"><span class="flag">🇮🇳</span> Hindi Transcript</div>
+    <div class="card-text placeholder" id="hindiText">Speak in Hindi…</div>
+  </div>
+  <div class="card">
+    <div class="card-label"><span class="flag">🇬🇧</span> English Translation</div>
+    <div class="card-text placeholder" id="englishText">Translation will appear here…</div>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div class="metrics">
+  <div class="metric">
+    <span>Round-trip</span>
+    <span class="metric-val" id="metLatency">—</span>
+  </div>
+  <div class="metric">
+    <span>English audio</span>
+    <span class="metric-val" id="metAudio">—</span>
+  </div>
+  <div class="metric">
+    <span>Input duration</span>
+    <span class="metric-val" id="metInput">—</span>
+  </div>
+  <div class="metric">
+    <span>Session</span>
+    <span class="metric-val" id="metSession">—</span>
+  </div>
+</div>
+
+<audio id="audioPlayer" controls></audio>
+<div id="errorToast"></div>
+
+<script>
+// ── constants ──────────────────────────────────────────────────────────────
+const TARGET_SR   = 24000;
+const FRAME_MS    = 80;
+const FRAME_SAMPS = TARGET_SR * FRAME_MS / 1000;  // 1920
+const WS_URL      = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+
+// ── state ──────────────────────────────────────────────────────────────────
+let isRecording   = false;
+let audioCtx      = null;
+let mediaStream   = null;
+let processor     = null;
+let recordedSamps = [];
+let animFrame     = null;
+let analyser      = null;
+let sessionCount  = 0;
+
+// ── DOM ────────────────────────────────────────────────────────────────────
+const btn         = document.getElementById('recordBtn');
+const micIcon     = document.getElementById('micIcon');
+const stopIcon    = document.getElementById('stopIcon');
+const statusEl    = document.getElementById('statusText');
+const canvas      = document.getElementById('waveform');
+const ctx2d       = canvas.getContext('2d');
+const hindiEl     = document.getElementById('hindiText');
+const englishEl   = document.getElementById('englishText');
+const audioPlayer = document.getElementById('audioPlayer');
+const toast       = document.getElementById('errorToast');
+
+// ── helpers ────────────────────────────────────────────────────────────────
+function setStatus(text, cls = '') {
+  statusEl.textContent = text;
+  statusEl.className   = cls;
+}
+
+function showError(msg) {
+  toast.textContent  = '⚠ ' + msg;
+  toast.style.display = 'block';
+  setTimeout(() => { toast.style.display = 'none'; }, 4000);
+}
+
+function resetText() {
+  hindiEl.textContent   = 'Speak in Hindi…';
+  hindiEl.className     = 'card-text placeholder';
+  englishEl.textContent = 'Translation will appear here…';
+  englishEl.className   = 'card-text placeholder';
+  audioPlayer.style.display = 'none';
+  document.getElementById('metLatency').textContent = '—';
+  document.getElementById('metAudio').textContent   = '—';
+  document.getElementById('metInput').textContent   = '—';
+}
+
+// ── waveform visualiser ────────────────────────────────────────────────────
+function resizeCanvas() {
+  canvas.width  = canvas.offsetWidth  * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+  ctx2d.scale(devicePixelRatio, devicePixelRatio);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function drawIdle() {
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx2d.clearRect(0, 0, W, H);
+  ctx2d.strokeStyle = '#2e2e2e';
+  ctx2d.lineWidth   = 1.5;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, H / 2);
+  ctx2d.lineTo(W, H / 2);
+  ctx2d.stroke();
+}
+
+function drawLive() {
+  if (!analyser) return;
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx2d.clearRect(0, 0, W, H);
+  ctx2d.strokeStyle = '#e63946';
+  ctx2d.lineWidth   = 2;
+  ctx2d.beginPath();
+  const step = W / buf.length;
+  for (let i = 0; i < buf.length; i++) {
+    const y = ((buf[i] / 128) - 1) * (H / 2) + H / 2;
+    i === 0 ? ctx2d.moveTo(0, y) : ctx2d.lineTo(i * step, y);
+  }
+  ctx2d.stroke();
+  animFrame = requestAnimationFrame(drawLive);
+}
+
+drawIdle();
+
+// ── recording ──────────────────────────────────────────────────────────────
+async function startRecording() {
+  resetText();
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    });
+  } catch (e) {
+    showError('Microphone access denied. Allow mic in browser settings.');
+    return;
+  }
+
+  audioCtx     = new AudioContext({ sampleRate: TARGET_SR });
+  const source = audioCtx.createMediaStreamSource(mediaStream);
+
+  analyser              = audioCtx.createAnalyser();
+  analyser.fftSize      = 1024;
+  source.connect(analyser);
+
+  // ScriptProcessor captures raw PCM
+  processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  recordedSamps = [];
+  processor.onaudioprocess = e => {
+    recordedSamps.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  };
+  source.connect(processor);
+  processor.connect(audioCtx.destination);
+
+  isRecording = true;
+  btn.classList.add('recording');
+  micIcon.style.display  = 'none';
+  stopIcon.style.display = 'block';
+  setStatus('Recording… click to stop', 'active');
+  drawLive();
+}
+
+async function stopRecording() {
+  if (!isRecording) return;
+  isRecording = false;
+
+  // Stop visualiser
+  cancelAnimationFrame(animFrame);
+  drawIdle();
+
+  // Cleanup
+  processor.disconnect();
+  mediaStream.getTracks().forEach(t => t.stop());
+  await audioCtx.close();
+
+  btn.classList.remove('recording');
+  micIcon.style.display  = 'block';
+  stopIcon.style.display = 'none';
+  setStatus('Processing…', 'working');
+
+  // Flatten recorded samples
+  const totalLen = recordedSamps.reduce((s, a) => s + a.length, 0);
+  const audio    = new Float32Array(totalLen);
+  let off = 0;
+  for (const chunk of recordedSamps) { audio.set(chunk, off); off += chunk.length; }
+
+  if (totalLen < TARGET_SR * 0.5) {
+    setStatus('Too short — try again', '');
+    showError('Recording too short. Hold for at least 1 second.');
+    return;
+  }
+
+  await translate(audio);
+}
+
+btn.addEventListener('click', () => {
+  if (isRecording) stopRecording();
+  else             startRecording();
+});
+
+// ── WebSocket session ──────────────────────────────────────────────────────
+async function translate(audio) {
+  sessionCount++;
+  const sessionId = `s-web-${String(sessionCount).padStart(4,'0')}`;
+  document.getElementById('metSession').textContent = sessionId;
+
+  const t0 = performance.now();
+
+  // float32 → int16 PCM
+  const pcm = new Int16Array(audio.length);
+  for (let i = 0; i < audio.length; i++) {
+    pcm[i] = Math.max(-32768, Math.min(32767, Math.round(audio[i] * 32767)));
+  }
+
+  document.getElementById('metInput').textContent =
+    (audio.length / TARGET_SR).toFixed(2) + 's';
+
+  const audioChunks = [];
+  let transcript    = '';
+  let translation   = '';
+
+  await new Promise((resolve, reject) => {
+    const ws = new WebSocket(WS_URL);
+    ws.binaryType = 'arraybuffer';
+
+    ws.onopen = () => {
+      // session_start
+      ws.send(JSON.stringify({
+        type: 'session_start', session_id: sessionId,
+        sample_rate: TARGET_SR, encoding: 'pcm_s16le',
+        source_language: 'hi', target_language: 'en'
+      }));
+
+      // stream in 80ms frames
+      for (let i = 0; i < pcm.length; i += FRAME_SAMPS) {
+        const frame = new Int16Array(FRAME_SAMPS);
+        frame.set(pcm.subarray(i, i + FRAME_SAMPS));
+        ws.send(frame.buffer);
+      }
+
+      // input_end
+      ws.send(JSON.stringify({
+        type: 'input_end', session_id: sessionId,
+        valid_samples: pcm.length
+      }));
+    };
+
+    ws.onmessage = e => {
+      if (typeof e.data === 'string') {
+        const msg = JSON.parse(e.data);
+
+        if (msg.type === 'transcript') {
+          transcript = msg.text;
+          hindiEl.textContent   = transcript || '(no speech detected)';
+          hindiEl.className     = 'card-text';
+          setStatus('Translating…', 'working');
+        }
+        else if (msg.type === 'translation') {
+          translation = msg.text;
+          englishEl.textContent = translation;
+          englishEl.className   = 'card-text';
+          setStatus('Generating audio…', 'working');
+        }
+        else if (msg.type === 'session_complete') {
+          ws.close();
+          resolve();
+        }
+      } else {
+        audioChunks.push(e.data);
+      }
+    };
+
+    ws.onerror = err => {
+      showError('WebSocket error — is the server running?');
+      reject(err);
+    };
+    ws.onclose = () => resolve();
+  });
+
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(1) + 's';
+  document.getElementById('metLatency').textContent = elapsed;
+
+  if (audioChunks.length === 0) {
+    setStatus('No audio returned', '');
+    return;
+  }
+
+  // Merge received int16 PCM chunks → float32
+  const totalBytes = audioChunks.reduce((s, b) => s + b.byteLength, 0);
+  const combined   = new Int16Array(totalBytes / 2);
+  let offset = 0;
+  for (const buf of audioChunks) {
+    combined.set(new Int16Array(buf), offset);
+    offset += buf.byteLength / 2;
+  }
+
+  const dur = (combined.length / TARGET_SR).toFixed(2) + 's';
+  document.getElementById('metAudio').textContent = dur;
+
+  // Play via AudioContext
+  const playCtx   = new AudioContext({ sampleRate: TARGET_SR });
+  const abuf       = playCtx.createBuffer(1, combined.length, TARGET_SR);
+  const ch         = abuf.getChannelData(0);
+  for (let i = 0; i < combined.length; i++) ch[i] = combined[i] / 32768.0;
+
+  const src = playCtx.createBufferSource();
+  src.buffer = abuf;
+  src.connect(playCtx.destination);
+  src.start();
+  setStatus('Playing English translation ▶', 'done');
+
+  src.onended = () => setStatus('Done — click to record again', '');
+
+  // Also offer a download link via blob URL
+  const wavBlob = pcmToWavBlob(combined, TARGET_SR);
+  audioPlayer.src = URL.createObjectURL(wavBlob);
+  audioPlayer.style.display = 'block';
+}
+
+// ── PCM → WAV blob (for the <audio> element) ──────────────────────────────
+function pcmToWavBlob(pcm16, sr) {
+  const numCh   = 1;
+  const bps     = 2;  // bytes per sample
+  const dataLen = pcm16.length * bps;
+  const buf     = new ArrayBuffer(44 + dataLen);
+  const view    = new DataView(buf);
+  function str(off, s) { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); }
+  str(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true);
+  str(8, 'WAVE'); str(12, 'fmt ');
+  view.setUint32(16, 16, true);       // chunk size
+  view.setUint16(20, 1, true);        // PCM
+  view.setUint16(22, numCh, true);
+  view.setUint32(24, sr, true);
+  view.setUint32(28, sr * numCh * bps, true);
+  view.setUint16(32, numCh * bps, true);
+  view.setUint16(34, 16, true);
+  str(36, 'data'); view.setUint32(40, dataLen, true);
+  const samples = new Int16Array(buf, 44);
+  samples.set(pcm16);
+  return new Blob([buf], { type: 'audio/wav' });
+}
+</script>
+</body>
+</html>

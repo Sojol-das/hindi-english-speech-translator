@@ -1,0 +1,59 @@
+# Sample Hindi sentences covering various content types:
+# Names, places, organisations, amounts (lakh/crore), numbers, dates, times,
+# phone/account numbers, products, negations, conditions, self-corrections, Hinglish.
+
+# Banking / finance
+मैंने कल अपना पुराना बैंक खाता बंद करवा दिया।
+मेरे account में पचास हजार रुपये transfer कर दो।
+इस साल हमारी company का profit पांच करोड़ रुपये था।
+मुझे तीन लाख का loan चाहिए, EMI कितनी होगी?
+मेरे debit card से बिना मेरी permission के दस हजार रुपये निकल गए।
+मेरा account number नौ शून्य तीन दो एक सात आठ छह पांच चार है।
+
+# Names and places
+राहुल गुप्ता कल दिल्ली से मुंबई जा रहे हैं।
+प्रिया शर्मा AIIMS में doctor हैं।
+मुझे Connaught Place से Lajpat Nagar जाना है।
+अमिताभ बच्चन की नई film बहुत अच्छी है।
+
+# Phone numbers and dates
+मेरा phone number नौ आठ सात छह पांच चार तीन दो एक शून्य है।
+appointment पंद्रह नवंबर दो हजार चौबीस को तीन बजे है।
+मुझे सात जुलाई को Hyderabad पहुंचना है।
+
+# Conditions (if-then)
+अगर कल rain नहीं हुई तो हम picnic पर जाएंगे।
+यदि आपका fever कम नहीं हुआ तो doctor के पास जाना पड़ेगा।
+जब तक वो आएंगे नहीं, हम खाना नहीं खाएंगे।
+
+# Negations
+नहीं, मैंने कभी नहीं कहा कि मैं वहां जाऊंगा।
+मुझे यह product बिलकुल पसंद नहीं आया।
+मैंने order cancel नहीं किया था, फिर भी refund नहीं मिला।
+
+# Self-corrections
+मुझे... मतलब हमें कल meeting attend करनी है।
+वो... वो Sanjay है, नहीं नहीं, Suresh है।
+मैं सोमवार को, नहीं रुको, मंगलवार को आऊंगा।
+
+# Hinglish (code-switched Hindi + English)
+यह mobile बहुत अच्छा है, इसकी battery बहुत लंबे समय तक चलती है।
+क्या आपने आज का weather forecast देखा? बहुत ज्यादा गर्मी है।
+मुझे online shopping में कुछ problem आ रही है, help चाहिए।
+मैं अगले महीने job छोड़ने की सोच रहा हूं।
+उसकी presentation बहुत boring थी, सब लोग सो गए।
+
+# Healthcare
+क्या आप मुझे नजदीकी hospital का address बता सकते हैं?
+मेरी दादी को sugar और BP दोनों हैं।
+doctor ने कहा दिन में दो बार tablet लेनी है।
+
+# Transport and travel
+दिल्ली से मुंबई की flight कितने घंटे की है?
+मुझे जल्दी है, क्या आप meter से चलेंगे?
+Ola और Uber दोनों ने surge लगाया है।
+
+# Products and consumer
+इस refrigerator की warranty दो साल की है।
+Amazon पर यही product तीन सौ रुपये सस्ता मिल रहा है।
+मेरा order तीन दिन पहले ship हुआ था पर अभी तक नहीं आया।

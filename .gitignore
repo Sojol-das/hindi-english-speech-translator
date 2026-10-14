@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Generated dataset and audio
+dataset_output/
+*.wav
+*.mp3
+*.log
+
+# Env
+.env
+*.local
